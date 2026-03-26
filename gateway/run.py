@@ -4416,6 +4416,8 @@ class GatewayRunner:
             os.environ["HERMES_SESSION_THREAD_ID"] = str(context.source.thread_id)
         if event and event.message_id:
             os.environ["HERMES_SESSION_MESSAGE_ID"] = event.message_id
+        else:
+            os.environ.pop("HERMES_SESSION_MESSAGE_ID", None)
     
     def _clear_session_env(self) -> None:
         """Clear session environment variables."""
