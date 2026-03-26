@@ -432,7 +432,10 @@ class TestSendToPlatformChunking:
         sent_calls = []
 
         async def fake_send(token, chat_id, message, media_files=None, thread_id=None, reply_to_message_id=None):
-            sent_calls.append(media_files or [])
+            sent_calls.append({
+                "media_files": media_files or [],
+                "reply_to_message_id": reply_to_message_id,
+            })
             return {"success": True, "platform": "telegram", "chat_id": chat_id, "message_id": str(len(sent_calls))}
 
         long_msg = "word " * 2000  # ~10000 chars, well over 4096
@@ -441,13 +444,14 @@ class TestSendToPlatformChunking:
             asyncio.run(
                 _send_to_platform(
                     Platform.TELEGRAM,
-                    SimpleNamespace(enabled=True, token="tok", extra={}),
-                    "123", long_msg, media_files=media,
+                    SimpleNamespace(enabled=True, token="***", extra={}),
+                    "123", long_msg, media_files=media, reply_to_message_id="777",
                 )
             )
         assert len(sent_calls) >= 3
-        assert all(call == [] for call in sent_calls[:-1])
-        assert sent_calls[-1] == media
+        assert all(call["media_files"] == [] for call in sent_calls[:-1])
+        assert sent_calls[-1]["media_files"] == media
+        assert all(call["reply_to_message_id"] == "777" for call in sent_calls)
 
 
 # ---------------------------------------------------------------------------

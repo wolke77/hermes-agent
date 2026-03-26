@@ -198,6 +198,7 @@ def _handle_send(args):
                 reply_to_message_id=reply_to_message_id,
             )
         )
+
         if used_home_channel and isinstance(result, dict) and result.get("success"):
             result["note"] = f"Sent to {platform_name} home channel (chat_id: {chat_id})"
         elif use_current_target and isinstance(result, dict) and result.get("success"):
@@ -350,7 +351,7 @@ async def _send_to_platform(platform, pconfig, chat_id, message, thread_id=None,
                 chunk,
                 media_files=media_files if is_last else [],
                 thread_id=thread_id,
-                reply_to_message_id=reply_to_message_id if i == 0 else None,
+                reply_to_message_id=reply_to_message_id,
             )
             if isinstance(result, dict) and result.get("error"):
                 return result
