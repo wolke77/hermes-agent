@@ -376,7 +376,12 @@ async def _send_to_platform(platform, pconfig, chat_id, message, thread_id=None,
     last_result = None
     for chunk in chunks:
         if platform == Platform.DISCORD:
-            result = await _send_discord(pconfig.token, chat_id, chunk)
+            result = await _send_discord(
+                pconfig.token,
+                chat_id,
+                chunk,
+                reply_to_message_id=reply_to_message_id,
+            )
         elif platform == Platform.SLACK:
             result = await _send_slack(
                 pconfig.token,
@@ -530,7 +535,7 @@ async def _send_telegram(token, chat_id, message, media_files=None, thread_id=No
         return {"error": f"Telegram send failed: {e}"}
 
 
-async def _send_discord(token, chat_id, message):
+async def _send_discord(token, chat_id, message, reply_to_message_id=None):
     """Send a single message via Discord REST API (no websocket client needed).
 
     Chunking is handled by _send_to_platform() before this is called.
@@ -542,8 +547,11 @@ async def _send_discord(token, chat_id, message):
     try:
         url = f"https://discord.com/api/v10/channels/{chat_id}/messages"
         headers = {"Authorization": f"Bot {token}", "Content-Type": "application/json"}
+        payload = {"content": message}
+        if reply_to_message_id is not None:
+            payload["message_reference"] = {"message_id": str(reply_to_message_id)}
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
-            async with session.post(url, headers=headers, json={"content": message}) as resp:
+            async with session.post(url, headers=headers, json=payload) as resp:
                 if resp.status not in (200, 201):
                     body = await resp.text()
                     return {"error": f"Discord API error ({resp.status}): {body}"}

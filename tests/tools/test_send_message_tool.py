@@ -459,6 +459,25 @@ class TestSendToPlatformChunking:
 # ---------------------------------------------------------------------------
 
 
+class TestSendToPlatformDiscord:
+    def test_discord_routes_reply_to_current_context(self):
+        async_mock = AsyncMock(return_value={"success": True, "platform": "discord", "chat_id": "123", "message_id": "456"})
+
+        with patch("tools.send_message_tool._send_discord", async_mock):
+            result = asyncio.run(
+                _send_to_platform(
+                    Platform.DISCORD,
+                    SimpleNamespace(enabled=True, token="***", extra={}),
+                    "123",
+                    "hello",
+                    reply_to_message_id="789",
+                )
+            )
+
+        assert result["success"] is True
+        async_mock.assert_awaited_once_with("***", "123", "hello", reply_to_message_id="789")
+
+
 class TestSendToPlatformSlack:
     def test_slack_routes_current_thread_context(self):
         async_mock = AsyncMock(return_value={"success": True, "platform": "slack", "chat_id": "C123", "message_id": "111.222"})
