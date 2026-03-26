@@ -377,7 +377,13 @@ async def _send_to_platform(platform, pconfig, chat_id, message, thread_id=None,
         if platform == Platform.DISCORD:
             result = await _send_discord(pconfig.token, chat_id, chunk)
         elif platform == Platform.SLACK:
-            result = await _send_slack(pconfig.token, chat_id, chunk)
+            result = await _send_slack(
+                pconfig.token,
+                chat_id,
+                chunk,
+                thread_id=thread_id,
+                reply_to_message_id=reply_to_message_id,
+            )
         elif platform == Platform.WHATSAPP:
             result = await _send_whatsapp(pconfig.extra, chat_id, chunk)
         elif platform == Platform.SIGNAL:
@@ -546,7 +552,7 @@ async def _send_discord(token, chat_id, message):
         return {"error": f"Discord send failed: {e}"}
 
 
-async def _send_slack(token, chat_id, message):
+async def _send_slack(token, chat_id, message, thread_id=None, reply_to_message_id=None):
     """Send via Slack Web API."""
     try:
         import aiohttp
@@ -555,8 +561,12 @@ async def _send_slack(token, chat_id, message):
     try:
         url = "https://slack.com/api/chat.postMessage"
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        payload = {"channel": chat_id, "text": message}
+        thread_ts = thread_id or reply_to_message_id
+        if thread_ts:
+            payload["thread_ts"] = thread_ts
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
-            async with session.post(url, headers=headers, json={"channel": chat_id, "text": message}) as resp:
+            async with session.post(url, headers=headers, json=payload) as resp:
                 data = await resp.json()
                 if data.get("ok"):
                     return {"success": True, "platform": "slack", "chat_id": chat_id, "message_id": data.get("ts")}

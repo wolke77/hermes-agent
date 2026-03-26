@@ -455,6 +455,32 @@ class TestSendToPlatformChunking:
 # ---------------------------------------------------------------------------
 
 
+class TestSendToPlatformSlack:
+    def test_slack_routes_current_thread_context(self):
+        async_mock = AsyncMock(return_value={"success": True, "platform": "slack", "chat_id": "C123", "message_id": "111.222"})
+
+        with patch("tools.send_message_tool._send_slack", async_mock):
+            result = asyncio.run(
+                _send_to_platform(
+                    Platform.SLACK,
+                    SimpleNamespace(enabled=True, token="***", extra={}),
+                    "C123",
+                    "hello in thread",
+                    thread_id="1700000000.100000",
+                    reply_to_message_id="1700000000.200000",
+                )
+            )
+
+        assert result["success"] is True
+        async_mock.assert_awaited_once_with(
+            "***",
+            "C123",
+            "hello in thread",
+            thread_id="1700000000.100000",
+            reply_to_message_id="1700000000.200000",
+        )
+
+
 class TestSendToPlatformWhatsapp:
     def test_whatsapp_routes_via_local_bridge_sender(self):
         chat_id = "test-user@lid"
