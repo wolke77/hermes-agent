@@ -437,7 +437,7 @@ async def _send_telegram(token, chat_id, message, media_files=None, thread_id=No
         if thread_id is not None:
             thread_kwargs["message_thread_id"] = int(thread_id)
         if reply_to_message_id is not None:
-            thread_kwargs["reply_parameters"] = {"message_id": int(reply_to_message_id)}
+            thread_kwargs["reply_to_message_id"] = int(reply_to_message_id)
 
         last_msg = None
         warnings = []

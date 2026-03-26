@@ -4414,6 +4414,8 @@ class GatewayRunner:
             os.environ["HERMES_SESSION_CHAT_NAME"] = context.source.chat_name
         if context.source.thread_id:
             os.environ["HERMES_SESSION_THREAD_ID"] = str(context.source.thread_id)
+        else:
+            os.environ.pop("HERMES_SESSION_THREAD_ID", None)
         if event and event.message_id:
             os.environ["HERMES_SESSION_MESSAGE_ID"] = event.message_id
         else:

@@ -47,6 +47,24 @@ def test_set_session_env_clears_stale_message_id_when_event_has_none(monkeypatch
     assert os.getenv("HERMES_SESSION_MESSAGE_ID") is None
 
 
+def test_set_session_env_clears_stale_thread_id_when_context_has_none(monkeypatch):
+    runner = object.__new__(GatewayRunner)
+    source = SessionSource(
+        platform=Platform.TELEGRAM,
+        chat_id="-1001",
+        chat_name="Group",
+        chat_type="group",
+        thread_id=None,
+    )
+    context = SessionContext(source=source, connected_platforms=[], home_channels={})
+
+    monkeypatch.setenv("HERMES_SESSION_THREAD_ID", "17585")
+
+    runner._set_session_env(context, event=None)
+
+    assert os.getenv("HERMES_SESSION_THREAD_ID") is None
+
+
 def test_clear_session_env_removes_thread_id(monkeypatch):
     runner = object.__new__(GatewayRunner)
 
