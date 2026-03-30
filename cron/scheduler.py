@@ -295,6 +295,8 @@ def run_job(job: dict) -> tuple[bool, str, str, Optional[str]]:
             os.environ["HERMES_SESSION_THREAD_ID"] = str(origin["thread_id"])
 
     try:
+        from tools.send_message_tool import bind_current_session_target
+
         # Re-read .env and config.yaml fresh every run so provider/key
         # changes take effect without a gateway restart.
         from dotenv import load_dotenv
@@ -413,7 +415,16 @@ def run_job(job: dict) -> tuple[bool, str, str, Optional[str]]:
             session_db=_session_db,
         )
         
-        result = agent.run_conversation(prompt)
+        current_target = None
+        if origin:
+            current_target = {
+                "platform_name": origin["platform"],
+                "chat_id": str(origin["chat_id"]),
+                "thread_id": str(origin.get("thread_id")) if origin.get("thread_id") is not None else None,
+                "message_id": None,
+            }
+        with bind_current_session_target(current_target):
+            result = agent.run_conversation(prompt)
         
         final_response = result.get("final_response", "") or ""
         # Use a separate variable for log display; keep final_response clean

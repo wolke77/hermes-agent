@@ -5,12 +5,14 @@ Sends a message to a user or channel on any connected messaging platform
 human-friendly channel names to IDs. Works in both CLI and gateway contexts.
 """
 
+import contextvars
 import json
 import logging
 import os
 import re
 import ssl
 import time
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,21 @@ _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 _VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".3gp"}
 _AUDIO_EXTS = {".ogg", ".opus", ".mp3", ".wav", ".m4a"}
 _VOICE_EXTS = {".ogg", ".opus"}
+_SESSION_TARGET_UNSET = object()
+_CURRENT_SESSION_TARGET: contextvars.ContextVar[object] = contextvars.ContextVar(
+    "send_message_current_session_target",
+    default=_SESSION_TARGET_UNSET,
+)
+
+
+@contextmanager
+def bind_current_session_target(target: dict | None):
+    """Bind the current messaging session target for this execution context."""
+    token = _CURRENT_SESSION_TARGET.set(dict(target) if target else None)
+    try:
+        yield
+    finally:
+        _CURRENT_SESSION_TARGET.reset(token)
 
 
 SEND_MESSAGE_SCHEMA = {
@@ -250,7 +267,27 @@ def _describe_media_for_mirror(media_files):
 
 
 def _get_current_session_target():
-    """Resolve the active gateway conversation from environment variables."""
+    """Resolve the active messaging conversation.
+
+    Priority:
+    1. Context-local binding (safe for concurrent gateway sessions)
+    2. Environment variables (legacy fallback for cron/CLI integrations)
+    """
+    bound = _CURRENT_SESSION_TARGET.get()
+    if bound is not _SESSION_TARGET_UNSET:
+        if not bound:
+            return None
+        platform_name = str(bound.get("platform_name", "")).strip().lower()
+        chat_id = str(bound.get("chat_id", "")).strip()
+        if platform_name and chat_id and platform_name != "local":
+            return {
+                "platform_name": platform_name,
+                "chat_id": chat_id,
+                "thread_id": bound.get("thread_id") or None,
+                "message_id": bound.get("message_id") or None,
+            }
+        return None
+
     platform_name = os.getenv("HERMES_SESSION_PLATFORM", "").strip().lower()
     chat_id = os.getenv("HERMES_SESSION_CHAT_ID", "").strip()
     if not platform_name or not chat_id or platform_name == "local":

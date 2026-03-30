@@ -5004,6 +5004,8 @@ class GatewayRunner:
                 logger.debug("status_callback error (%s): %s", event_type, _e)
 
         def run_sync():
+            from tools.send_message_tool import bind_current_session_target
+
             # Pass session_key to process registry via env var so background
             # processes can be mapped back to this gateway session
             os.environ["HERMES_SESSION_KEY"] = session_key or ""
@@ -5205,7 +5207,14 @@ class GatewayRunner:
                             if _p:
                                 _history_media_paths.add(_p)
             
-            result = agent.run_conversation(message, conversation_history=agent_history, task_id=session_id)
+            current_target = {
+                "platform_name": source.platform.value,
+                "chat_id": source.chat_id,
+                "thread_id": source.thread_id,
+                "message_id": event.message_id,
+            }
+            with bind_current_session_target(current_target):
+                result = agent.run_conversation(message, conversation_history=agent_history, task_id=session_id)
             result_holder[0] = result
 
             # Signal the stream consumer that the agent is done
